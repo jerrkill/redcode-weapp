@@ -47,7 +47,8 @@
             userInfo: null,
             StatusBar: null,
             Custom: null,
-            CustomBar: null
+            CustomBar: null,
+            appName: '扫码领红包',
         }
         data = {
             tokenKey: 'accessToken',
@@ -112,7 +113,7 @@
                 console.log('onLaunchend', e)
               }
 
-    })
+            })
 
             // let systemInfo = await wepy.getSystemInfo()
             // console.log(systemInfo)
