@@ -1,8 +1,8 @@
 import wepy from 'wepy'
 
 
-const host = 'http://redcode.test/api/'
-// const host = 'http://test-env.learn-go.com/api/'
+const host = 'http://redcode.test/api'
+// const host = 'http://test-env.learn-go.com/api'
 
 // 普通请求
 const request = async (options, showLoading = true) => {
