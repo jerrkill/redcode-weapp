@@ -59,9 +59,9 @@ map,.mapBox{
 </style>
 <template>
         <view class="UCenter-bg">
-            <image src="/images/logo.png" class="png" mode="widthFix"></image>
+            <image src="{{user.avatar?user.avatar:'/images/logo.png'}}" class="png" mode="widthFix"></image>
             <view class="text-xl">
-                <text class="text-lg">无名氏</text>
+                <text class="text-lg">{{user.nick?user.nick:'匿名用户'}}</text>
             </view>
             <!-- <view class="margin-top-sm">
                 <text>By:文晓港</text>
@@ -131,7 +131,10 @@ map,.mapBox{
             navigationBarTitleText: '扫码领红包'
         }
         data =  {
-            isAuth: false
+            no: null,
+            isAuth: false,
+            user: null,
+            qrcode: null,
         }
         methods = {}
         async authLogin(e) {
@@ -166,6 +169,8 @@ map,.mapBox{
             // this.$apply()
         }
         async onLoad(options) {
+            console.log(options)
+            this.no = decodeURIComponent(options.no)
             if (!this.$parent.checkLogin()) {
                 // 是否授权
                 let authSettingRes = await wepy.getSetting()
@@ -210,6 +215,7 @@ map,.mapBox{
             } else {
                 this.isAuth = true;
                 this.user = await this.$parent.getCurrentUser()
+                this.checkout()
             }
         }
         onReady() {
@@ -224,6 +230,34 @@ map,.mapBox{
             this.$parent.isLogin = true
             this.isAuth = true
             this.user = await this.$parent.getCurrentUser()
+            this.checkout()
+        }
+
+        async checkout() {
+            if (!this.isAuth || !this.no) {
+                return
+            }
+
+            try {
+                let qrcodeResponse = await api.authRequest({
+                    url: 'qrcode?no=' + this.no,
+                    method: 'GET'
+                })
+                if (qrcodeResponse.statusCode === 200) {
+                    this.qrcode = qrcodeResponse.data
+                } else {
+                    wepy.showModal({
+                        title: '提示',
+                        content: '二维码错误：'+qrcodeResponse.data.message
+                    })
+                }
+            } catch (err) {
+                wepy.showModal({
+                    title: '提示',
+                    content: '服务器错误，请联系管理员'
+                })
+            }
+
         }
   }
 </script>
