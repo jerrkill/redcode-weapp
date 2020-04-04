@@ -131,10 +131,12 @@ map,.mapBox{
             navigationBarTitleText: '扫码领红包'
         }
         data =  {
+            can: false,
             no: null,
             isAuth: false,
             user: null,
             qrcode: null,
+            systemInfo: null,
         }
         methods = {}
         async authLogin(e) {
@@ -170,7 +172,13 @@ map,.mapBox{
         }
         async onLoad(options) {
             console.log(options)
-            this.no = decodeURIComponent(options.no)
+            // 获取本机信息
+            await this.getSysInfo()
+            var data = wx.getLaunchOptionsSync()//获取场景代码
+            if (data.scene == 1047 || data.scene == 1011 || data.scene == 1025 || data.scene == 1124){
+                this.can = true;
+            }
+            this.no = decodeURIComponent(options.scene)
             if (!this.$parent.checkLogin()) {
                 // 是否授权
                 let authSettingRes = await wepy.getSetting()
@@ -215,11 +223,17 @@ map,.mapBox{
             } else {
                 this.isAuth = true;
                 this.user = await this.$parent.getCurrentUser()
+                this.$apply()
                 this.checkout()
             }
         }
         onReady() {
             // wx.hideLoading()
+        }
+        async getSysInfo() {
+            let systemInfo = await wepy.getSystemInfo()
+            console.log(systemInfo)
+            this.systemInfo = systemInfo;
         }
         async loginSuccess(authResponse) {
             console.log('login success')
@@ -231,10 +245,11 @@ map,.mapBox{
             this.isAuth = true
             this.user = await this.$parent.getCurrentUser()
             this.checkout()
+            this.$apply()
         }
 
         async checkout() {
-            if (!this.isAuth || !this.no) {
+            if (!this.isAuth || !this.no || !this.can) {
                 return
             }
 
@@ -245,6 +260,7 @@ map,.mapBox{
                 })
                 if (qrcodeResponse.statusCode === 200) {
                     this.qrcode = qrcodeResponse.data
+                    await this.comfirm()
                 } else {
                     wepy.showModal({
                         title: '提示',
@@ -258,6 +274,58 @@ map,.mapBox{
                 })
             }
 
+        }
+
+        async comfirm() {
+            if (!this.isAuth || !this.no || !this.can) {
+                return
+            }
+
+            try {
+                let redpackResponse = await api.authRequest({
+                    url: 'redpack?no=' + this.no,
+                    method: 'POST',
+                    data: {
+                        sysInfo: this.systemInfo
+                    }
+                })
+                console.log(redpackResponse)
+                if (redpackResponse.statusCode === 200) {
+                    this.redpack = redpackResponse.data
+                    let jsapi = redpackResponse.data.jsapi
+                    wx.sendBizRedPacket({
+                        timeStamp: jsapi.timeStamp,
+                        // 支付签名随机串，不长于 32 位
+                        nonceStr: jsapi.nonceStr,
+                        //扩展字段，由商户传入
+                        package: jsapi.package,
+                        // 签名方式，
+                        signType: jsapi.signType,
+                        // 支付签名
+                        paySign: jsapi.paySign,
+                        success: function (res) {
+                            console.log(res)
+                        },
+                        fail: function (res) {
+                            console.log(res)
+                        },
+                        complete: function (res) {
+                            console.log(res)
+                        }
+                    })
+                } else {
+                    wepy.showModal({
+                        title: '提示',
+                        content: '二维码错误：'+redpackResponse.data.message
+                    })
+                }
+            } catch (err) {
+                console.log(err)
+                wepy.showModal({
+                    title: '提示',
+                    content: '服务器错误，请联系管理员'
+                })
+            }
         }
   }
 </script>
